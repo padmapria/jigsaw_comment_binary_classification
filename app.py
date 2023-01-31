@@ -1,9 +1,8 @@
 import numpy as np
 from flask import Flask, request, jsonify, render_template
-import pickle
+from common import *
 
 app = Flask(__name__)
-model = pickle.load(open('model.pkl', 'rb'))
 
 @app.route('/')
 def home():
@@ -14,25 +13,31 @@ def predict():
     '''
     For rendering results on HTML GUI
     '''
-    int_features = [int(x) for x in request.form.values()]
-    final_features = [np.array(int_features)]
-    prediction = model.predict(final_features)
+    text_comment = [str(x) for x in request.form.values()]
+    
+    vectorizer = "Sentence_Transformer_LR"
+    
+    # Load the model
+    model_name = vectorizer+".pkl"
+    clf = read_pickle(model_name)
+    
+    #Clean the text
+    clean_str = clean_data(text_comment)
+    test_str = pd.Series(clean_str)
+    
+    #Encode using sentence transformer
+    X_test = sent_transformer_model.encode(test_str)
+    
+    # Make prediction using model loaded from disk as per the data.
+    prediction = clf.predict(X_test)
 
-    output = round(prediction[0], 2)
-
-    return render_template('index.html', prediction_text='Salary is {}'.format(output))
-
-
-@app.route('/predict_api',methods=['POST'])
-def predict_api():
-    '''
-    For direct API calls trought request
-    '''
-    data = request.get_json(force=True)
-    prediction = model.predict([np.array(list(data.values()))])
-
+    # Take the first value of prediction
+    print("prediction :: ",prediction)
     output = prediction[0]
-    return jsonify(output)
+
+    return render_template('index.html', prediction_text='If Toxic {}'.format(output))
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
